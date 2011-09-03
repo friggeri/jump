@@ -90,8 +90,11 @@ process.stdin.on('keypress', function(char, key) {
       }
       charm.position(0,y);
       if (key.name == "enter"){
-        charm.write('cd "'+(selected||lastSuggestions[0])+'"\n');
-        process.stdout.write((selected||lastSuggestions[0]));
+        var dir = selected||lastSuggestions[0];
+        if (dir){
+          charm.write('cd "'+dir+'"\n');
+          process.stdout.write(dir);
+        }
       }
       process.exit();
     } else {
