@@ -1,80 +1,114 @@
 #!/usr/bin/env node
 var spawn  = require('child_process').spawn,
     charm = require('charm')(process.stdin, process.stderr),
-    tty   = require('tty');
+    tty   = require('tty'),
+    util  = require('util'),
+    path  = require('path');
 
-var find = function(name, cb){
-  var query  = 'kMDItemContentType == "public.folder" && kMDItemDisplayName == "*%name*"wcd'.replace(/([^\\])%name/, "$1"+name),
-      child  = spawn('mdfind', [query]),
-      buffer = [];
-  child.stdout.on('data', [].push.bind(buffer));
-  child.on('exit', function(){
-    cb(null, buffer.join('\n').split('\n').filter(function(e){return e.length}))
-  })
+var homePath  = process.env.HOME,
+    inHome    = new RegExp("^"+homePath.replace(/\//g, '\\/')),
+    inLibrary = new RegExp("^"+path.join(homePath, 'Library').replace(/\//g, '\\/'));
+    
+var find = (function(){
+  var counter = 0;
+  return function(name, cb){
+    var query   = 'kMDItemContentType == "public.folder" && kMDItemDisplayName == "*%name*"wcd'.replace(/([^\\])%name/, "$1"+name),
+        child   = spawn('mdfind', [query]),
+        buffer  = [],
+        current = ++counter;
+    child.stdout.on('data', [].push.bind(buffer));
+    child.on('exit', function(){
+      if (current == counter) cb(buffer.join('\n').split('\n').filter(function(e){
+        return e.length && e.match(inHome) && !e.match(inLibrary)
+      }));
+    })
+  }
+})();
+
+
+var Suggestions = function(number){
+  this.defaults = true;
+  this.selected = 0;
+  this.number   = number || 5;
+}
+util.inherits(Suggestions, Array);
+
+Suggestions.prototype.update = function(newSuggestions){
+  if (!this.defaults) {
+    this.selected = newSuggestions.indexOf(this[this.selected]);
+    if (this.selected==-1 || this.selected > 5) {
+      this.defaults = true;
+      this.selected = 0;
+    }
+  }
+  var i=0;
+  for(;i<newSuggestions.length;i++) this[i] = newSuggestions[i];
+  for(;i<this.length;i++) delete this[i];
+  this.length = newSuggestions.length;
+  this.render();
 };
 
-var buffer          = [];
-var counter         = 0;
-var toErase         = 0;
-var selected        = null;
-var selectedPos     = 1;
-var lastSuggestions = [];
+Suggestions.prototype.selectPrevious = function(){
+  if (this.selected>0){
+    this.defaults=false;
+    this.selected--;
+  }
+  this.render();
+};
 
-var refreshResults = function(suggestions){
-  var size = tty.getWindowSize(), lines=size[0], cols=size[1];
+Suggestions.prototype.selectNext = function(){
+  if (this.selected<this.number && this.selected<this.length-1){
+    this.defaults=false;
+    this.selected++;
+  }
+  this.render();
+};
+
+Suggestions.prototype.output = function(){
+  if (this[this.selected]){
+    charm.write('cd "'+this[this.selected]+'"\n');
+    process.stdout.write(this[this.selected]);
+  }
+};
+
+Suggestions.prototype.highlight = function(idx){
+  return (this.defaults && idx == 0)||(idx == this.selected);
+};
+
+Suggestions.prototype.render = function(){
+  var size  = tty.getWindowSize(), 
+      lines = size[0], 
+      cols  = size[1],
+      idx   = 0;
+
   charm.position(function(x,y){
     charm.cursor(false);
-    
-    if ((selectedPos = 1+suggestions.indexOf(selected)) == 0 || selectedPos > 5){
-      selected=null;
-      selectedPos=1;
-    }
-    
-    lastSuggestions = suggestions;
-    
-    toErase=0;
-    for(var i=1; i<=5; i++){
-      if (i<= suggestions.length){
-        if (y+i > lines){
-          charm.position(cols, lines);
-          y--;
-          charm.write('\n');
-        }
-        toErase++;
-        charm.position(0,y+i);
-        charm.erase('end');
-
-        if (i==selectedPos) charm.display('reverse');
-
-        charm.write(suggestions[i-1].replace(process.env.HOME, '~'));
-        charm.display('reset');
-      } else {
-        if (y+i<=lines){
-          charm.position(0,y+i);
-          charm.erase('end');
-        }
+    for(;idx<Math.min(this.number, this.length); idx++){
+      if (y+idx >= lines){
+        charm.position(cols, lines).write('\n');
+        y--;
       }
+      if (this.highlight(idx)) charm.display('reverse');
+      charm.position(0,y+idx+1)
+           .erase('end')
+           .write(this[idx].replace(homePath, '~'));
+      if (this.highlight(idx)) charm.display('reset');
     }
-    
-    charm.position(x,y);
-    charm.cursor(true);
-  });
+    for(;y+idx<lines;idx++) charm.position(0,y+idx+1).erase('line');
+    charm.position(x,y).cursor(true);
+  }.bind(this));
 };
+
+var buffer      = [];
+var suggestions = new Suggestions;
 
 process.stdin.resume();
 process.stdin.on('keypress', function(char, key) {
-  //console.log(char, key);
   charm.position(function(x,y){
     if (key && key.name == 'up'){
-      if (selectedPos>1){
-        selected=lastSuggestions[(--selectedPos)-1];
-        refreshResults(lastSuggestions);
-      }
+      suggestions.selectPrevious();
     } else if (key && key.name == 'down'){
-      if (selectedPos<5 && selectedPos<lastSuggestions.length){
-        selected=lastSuggestions[(++selectedPos)-1];
-        refreshResults(lastSuggestions);
-      }
+      suggestions.selectNext();
     } else if (key && key.name == 'left'){
       if (x>1) charm.left();
     } else if (key && key.name == 'right'){
@@ -84,47 +118,28 @@ process.stdin.on('keypress', function(char, key) {
     } else if (key && key.ctrl && key.name == 'e'){
       charm.position(1+buffer.length, y);
     } else if (key && (key.name == "enter" || (key.ctrl && key.name == 'c'))){
-      for (var line=0; line<=toErase; line++){
-        charm.position(0,y+line);
-        charm.erase('line');
-      }
-      charm.position(0,y);
-      if (key.name == "enter"){
-        var dir = selected||lastSuggestions[0];
-        if (dir){
-          charm.write('cd "'+dir+'"\n');
-          process.stdout.write(dir);
-        }
-      }
-      process.exit();
-    } else {
       charm.cursor(false);
-      
-      var rest=[];
+      for (var idx=y; idx<tty.getWindowSize()[0]; idx++) charm.position(0,idx).erase('line');
+      charm.position(0,y);
+      if (key.name == "enter") suggestions.output();
+      charm.cursor(true);
+      process.exit();
+    } else if (!key || !key.ctrl){
+      charm.cursor(false);
+      var right=[];
       if (key && key.name == 'backspace'){
         if (x>1){          
-          rest = buffer.slice(x-1);
+          right = buffer.slice(x-1);
           buffer.length=x-2;
-          buffer.push.apply(buffer, rest);
+          buffer.push.apply(buffer, right);
           charm.position(--x, y);
         }
       } else if (typeof char != "undefined"){
         buffer.splice(x-1, 0, char);
-        rest = buffer.slice(x-1);
-        x++;
+        right = buffer.slice((x++)-1);
       }
-      
-      charm.erase('end');
-      charm.write(rest.join(''));
-      charm.position(x,y);
-      
-      charm.cursor(true);
-      
-      (function(current){
-        find(buffer.join(''), function(err, suggestions){
-          if (current == counter) refreshResults(err?[]:suggestions);
-        });
-      })(++counter)
+      charm.erase('end').write(right.join('')).position(x,y).cursor(true);
+      find(buffer.join(''), suggestions.update.bind(suggestions));
     }
   })
 });
