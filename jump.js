@@ -139,7 +139,7 @@ process.stdin.on('keypress', function(char, key) {
       charm.position(1+buffer.length, y);
     } else if (key && (key.name == "enter" || (key.ctrl && key.name == 'c'))){
       charm.cursor(false);
-      for (var idx=y; idx<tty.getWindowSize()[0]; idx++) charm.position(0,idx).erase('line');
+      for (var idx=y; idx<=tty.getWindowSize()[0]; idx++) charm.position(0,idx).erase('line');
       charm.position(0,y);
       if (key.name == "enter") suggestions.output();
       charm.cursor(true);
