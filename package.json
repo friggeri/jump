@@ -20,7 +20,4 @@
     "jump": "./jump.js"
   },
   "preferGlobal": true,
-  "scripts": {
-    "install":"sh ./install.sh"
-  }
 }

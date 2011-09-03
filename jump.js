@@ -5,6 +5,26 @@ var spawn  = require('child_process').spawn,
     util  = require('util'),
     path  = require('path');
 
+if (!process.env.JUMPPROFILE) {
+  process.stdout.write([
+    "###begin-jump-bash_profile",
+    "#",
+    "# Installation:",
+    "# jump >> ~/.bash_profile && source ~/.bash_profile",
+    "#",
+    "",
+    "function jump {",
+    "  local newDir=$(JUMPPROFILE=1 command jump);",
+    "  cd \"$newDir\";",
+    "}",
+    "alias j=\"jump\"",
+    "",
+    "###end-jump-bash_profile",
+    ""
+  ].join('\n'));
+  process.exit();
+}
+
 var homePath  = process.env.HOME,
     inHome    = new RegExp("^"+homePath.replace(/\//g, '\\/')),
     inLibrary = new RegExp("^"+path.join(homePath, 'Library').replace(/\//g, '\\/'));
@@ -24,7 +44,6 @@ var find = (function(){
     })
   }
 })();
-
 
 var Suggestions = function(number){
   this.defaults = true;
