@@ -12,6 +12,8 @@ Pretty simple :
 
 Type a few letters, `jump` autosuggests 5 results, move with arrows, return to select.
 
+`jump` uses spotlight (`mdfind`) behind the scenes, probably won't work on anything but osx.
+
 #TODO
 
 Sort by usage would be nice.
