@@ -1,10 +1,5 @@
 #!/usr/bin/env node
-var spawn  = require('child_process').spawn,
-    charm = require('charm')(process.stdin, process.stderr),
-    tty   = require('tty'),
-    util  = require('util'),
-    path  = require('path');
-
+// installation instruction if directly called
 if (!process.env.JUMPPROFILE) {
   process.stdout.write([
     "###begin-jump-bash_profile",
@@ -25,23 +20,29 @@ if (!process.env.JUMPPROFILE) {
   process.exit();
 }
 
-var homePath  = process.env.HOME,
-    inHome    = new RegExp("^"+homePath.replace(/\//g, '\\/')),
-    inLibrary = new RegExp("^"+path.join(homePath, 'Library').replace(/\//g, '\\/'));
-    
+var spawn  = require('child_process').spawn,
+    charm = require('charm')(process.stdin, process.stderr),
+    tty   = require('tty'),
+    util  = require('util'),
+    path  = require('path'),
+    homePath  = process.env.HOME;
+
+// wrapper around mdfind, searches for directories and filters results
 var find = (function(){
-  var counter = 0;
+  var counter = 0,
+      inHome    = new RegExp("^"+homePath.replace(/\//g, '\\/')),
+      inLibrary = new RegExp("^"+path.join(homePath, 'Library').replace(/\//g, '\\/'));
+  
   return function(name, cb){
     var query   = 'kMDItemContentType == "public.folder" && kMDItemDisplayName == "*%name*"wcd'.replace(/([^\\])%name/, "$1"+name),
         child   = spawn('mdfind', [query]),
         buffer  = [],
         current = ++counter;
-    child.stdout.on('data', [].push.bind(buffer));
     child.on('exit', function(){
       if (current == counter) cb(buffer.join('\n').split('\n').filter(function(e){
         return e.length && e.match(inHome) && !e.match(inLibrary)
       }));
-    })
+    }).stdout.on('data', [].push.bind(buffer));
   }
 })();
 
@@ -107,7 +108,7 @@ Suggestions.prototype.render = function(){
         charm.position(cols, lines).write('\n');
         y--;
       }
-      if (this.highlight(idx)) charm.display('reverse');
+      if (this.highlight(idx)) charm.foreground('yellow');
       charm.position(0,y+idx+1)
            .erase('end')
            .write(this[idx].replace(homePath, '~'));
