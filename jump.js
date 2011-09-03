@@ -1,56 +1,79 @@
 #!/usr/bin/env node
-var exec  = require('child_process').exec,
+var spawn  = require('child_process').spawn,
     charm = require('charm')(process.stdin, process.stderr),
     tty   = require('tty');
 
-var find = function(name, search, cb){
-  cb || (cb = search, search = 'mdfind "kMDItemContentType == \'public.folder\' && kMDItemDisplayName == \'*%name*\'wcd"');
-  exec(search.replace(/([^\\])%name/, "$1"+name), function(error, stdout, stderr){
-    if (error) return cb(error);
-    cb(null, stdout.split('\n').filter(function(e){return e.length}))
-  });
+var find = function(name, cb){
+  var query  = 'kMDItemContentType == "public.folder" && kMDItemDisplayName == "*%name*"wcd'.replace(/([^\\])%name/, "$1"+name),
+      child  = spawn('mdfind', [query]),
+      buffer = [];
+  child.stdout.on('data', [].push.bind(buffer));
+  child.on('exit', function(){
+    cb(null, buffer.join('\n').split('\n').filter(function(e){return e.length}))
+  })
 };
 
 var buffer          = [];
 var counter         = 0;
-var dirtyLines      = {};
 var toErase         = 0;
 var selected        = null;
 var selectedPos     = 1;
 var lastSuggestions = [];
 
+var refreshResults = function(suggestions){
+  var size = tty.getWindowSize(), lines=size[0], cols=size[1];
+  charm.position(function(x,y){
+    charm.cursor(false);
+    
+    if ((selectedPos = 1+suggestions.indexOf(selected)) == 0 || selectedPos > 5){
+      selected=null;
+      selectedPos=1;
+    }
+    
+    lastSuggestions = suggestions;
+    
+    toErase=0;
+    for(var i=1; i<=5; i++){
+      if (i<= suggestions.length){
+        if (y+i > lines){
+          charm.position(cols, lines);
+          y--;
+          charm.write('\n');
+        }
+        toErase++;
+        charm.position(0,y+i);
+        charm.erase('end');
+
+        if (i==selectedPos) charm.display('reverse');
+
+        charm.write(suggestions[i-1].replace(process.env.HOME, '~'));
+        charm.display('reset');
+      } else {
+        if (y+i<=lines){
+          charm.position(0,y+i);
+          charm.erase('end');
+        }
+      }
+    }
+    
+    charm.position(x,y);
+    charm.cursor(true);
+  });
+};
+
 process.stdin.resume();
 process.stdin.on('keypress', function(char, key) {
   //console.log(char, key);
-  var size = tty.getWindowSize(), lines=size[0], cols=size[1];
   charm.position(function(x,y){
     if (key && key.name == 'up'){
       if (selectedPos>1){
-        charm.cursor(false);
-        charm.position(0,y+selectedPos);
-        charm.write(" ");
-        
-        selectedPos-=1;
-        charm.position(0,y+selectedPos);
-        charm.write(">");
-        selected=lastSuggestions[selectedPos-1];
-        
-        charm.position(x,y);
-        charm.cursor(true);
+        selected=lastSuggestions[(--selectedPos)-1];
+        refreshResults(lastSuggestions);
       }
     } else if (key && key.name == 'down'){
       if (selectedPos<5 && selectedPos<lastSuggestions.length){
-        charm.cursor(false);
-        charm.position(0,y+selectedPos);
-        charm.write(" ");
-        
-        selectedPos+=1;
-        charm.position(0,y+selectedPos);
-        charm.write(">");
-        selected=lastSuggestions[selectedPos-1];
-        
-        charm.position(x,y);
-        charm.cursor(true);
+        selected=lastSuggestions[(++selectedPos)-1];
+        refreshResults(lastSuggestions);
       }
     } else if (key && key.name == 'left'){
       if (x>1) charm.left();
@@ -61,81 +84,44 @@ process.stdin.on('keypress', function(char, key) {
     } else if (key && key.ctrl && key.name == 'e'){
       charm.position(1+buffer.length, y);
     } else if (key && (key.name == "enter" || (key.ctrl && key.name == 'c'))){
-      for (var line in dirtyLines){
-        if (dirtyLines[line]){
-          charm.position(0,parseInt(line, 10)+y);
-          charm.erase('line')
-        }
+      for (var line=0; line<=toErase; line++){
+        charm.position(0,y+line);
+        charm.erase('line');
       }
       charm.position(0,y);
-      charm.erase('line');
       if (key.name == "enter"){
-        charm.position(0,y);
+        charm.write('cd "'+(selected||lastSuggestions[0])+'"\n');
         process.stdout.write((selected||lastSuggestions[0]));
       }
       process.exit();
     } else {
       charm.cursor(false);
-      var newX = x;
+      
+      var rest=[];
       if (key && key.name == 'backspace'){
         if (x>1){          
-          var rest = buffer.slice(x-1);
+          rest = buffer.slice(x-1);
           buffer.length=x-2;
           buffer.push.apply(buffer, rest);
           charm.position(--x, y);
-          newX--;
         }
       } else if (typeof char != "undefined"){
         buffer.splice(x-1, 0, char);
-        newX++;
+        rest = buffer.slice(x-1);
+        x++;
       }
       
       charm.erase('end');
-      charm.write(buffer.slice(x-1).join(''));
-      charm.position(newX,y);
+      charm.write(rest.join(''));
+      charm.position(x,y);
       
       charm.cursor(true);
       
       (function(current){
         find(buffer.join(''), function(err, suggestions){
-          if (current != counter) return;
-          if (err) suggestions=[];
-          
-          var newErase = 0;
-          
-          charm.cursor(false);
-          
-          if ((selectedPos = 1+suggestions.indexOf(selected)) == 0 || selectedPos > 5){
-            selected=null;
-            selectedPos=1;
-          }
-          
-          lastSuggestions = suggestions;
-          
-          for(var i=1; i<=5; i++){
-            if (i<= suggestions.length){
-              if (y+i > lines){
-                charm.position(cols, lines);
-                y--;
-                charm.write('\n');
-              }
-              charm.position(0,y+i);
-              charm.erase('end');
-              dirtyLines[i] = true;
-              charm.write((i==selectedPos?'> ':'  ')+suggestions[i-1].replace(process.env.HOME, '~'));
-            } else {
-              if (y+i<=lines){
-                charm.position(0,y+i);
-                charm.erase('end');
-                dirtyLines[i] = false;
-              }
-            }
-          }
-          
-          charm.position(newX,y);
-          charm.cursor(true);
-      });
-    })(++counter);
+          if (current == counter) refreshResults(err?[]:suggestions);
+        });
+      })(++counter)
     }
   })
 });
