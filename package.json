@@ -1,0 +1,26 @@
+{
+  "author": "Adrien Friggeri <adrien@friggeri.net> (http://friggeri.net)",
+  "name": "jump",
+  "description": "autosuggest cd in console",
+  "version": "0.0.1",
+  "repository": {
+    "url": ""
+  },
+  "directories": {
+    "lib": "."
+  },
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {
+    "charm": "~0.0.5"
+  },
+  "devDependencies": {},
+  "bin": {
+    "jump": "./jump.js"
+  },
+  "preferGlobal": true,
+  "scripts": {
+    "install":"sh ./install.sh"
+  }
+}
