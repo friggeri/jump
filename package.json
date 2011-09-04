@@ -13,7 +13,8 @@
     "node": "*"
   },
   "dependencies": {
-    "charm": "~0.0.5"
+    "charm"     : "~0.0.5",
+    "commander" : "~0.1.0"
   },
   "devDependencies": {},
   "bin": {

@@ -9,10 +9,10 @@ if (!process.env.JUMPPROFILE) {
     "#",
     "",
     "function jump {",
-    "  local newDir=$(JUMPPROFILE=1 command jump);",
+    "  local newDir=$(JUMPPROFILE=1 command jump \"$@\");",
     "  cd \"$newDir\";",
     "}",
-    "alias j=\"jump\"",
+    "alias j=\"jump -a\"",
     "",
     "###end-jump-bash_profile",
     ""
@@ -20,11 +20,17 @@ if (!process.env.JUMPPROFILE) {
   process.exit();
 }
 
+// commander uses process.stdout by default, let's invert stdout and stderr
+var tmpOut = process.stdout;
+process.stdout = process.stderr;
+process.stderr = tmpOut;
+
 var spawn  = require('child_process').spawn,
-    charm = require('charm')(process.stdin, process.stderr),
+    charm = require('charm')(process.stdin, process.stdout),
     tty   = require('tty'),
     util  = require('util'),
     path  = require('path'),
+    opts  = require('commander'),
     homePath  = process.env.HOME;
 
 // wrapper around mdfind, searches for directories and filters results
@@ -87,7 +93,7 @@ Suggestions.prototype.selectNext = function(){
 Suggestions.prototype.output = function(){
   if (this[this.selected]){
     charm.write('cd "'+this[this.selected]+'"\n');
-    process.stdout.write(this[this.selected]);
+    process.stderr.write(this[this.selected]);
   }
 };
 
@@ -119,12 +125,30 @@ Suggestions.prototype.render = function(){
   }.bind(this));
 };
 
-var buffer      = [];
-var suggestions = new Suggestions;
+opts
+  .version('0.0.3')
+  .option('-n --number <n>', 'number of suggestions', Number, 5)
+  .option('-a --auto', 'automatically change directory if only one suggestion', false)
+  .parse(process.argv)
 
+var buffer      = [];
+var suggestions = new Suggestions(opts.number);
+var prompt      = '> ';
+
+var exit = function(x, y, output){
+  charm.cursor(false);
+  for (var idx=y; idx<=tty.getWindowSize()[0]; idx++) charm.position(0,idx).erase('line');
+  charm.position(0,y);
+  if (output) suggestions.output();
+  charm.cursor(true);
+  process.exit();
+}
+
+charm.write(prompt);
 process.stdin.resume();
 process.stdin.on('keypress', function(char, key) {
   charm.position(function(x,y){
+    x = x - prompt.length;
     if (key && key.name == 'up'){
       suggestions.selectPrevious();
     } else if (key && key.name == 'down'){
@@ -138,28 +162,26 @@ process.stdin.on('keypress', function(char, key) {
     } else if (key && key.ctrl && key.name == 'e'){
       charm.position(1+buffer.length, y);
     } else if (key && (key.name == "enter" || (key.ctrl && key.name == 'c'))){
-      charm.cursor(false);
-      for (var idx=y; idx<=tty.getWindowSize()[0]; idx++) charm.position(0,idx).erase('line');
-      charm.position(0,y);
-      if (key.name == "enter") suggestions.output();
-      charm.cursor(true);
-      process.exit();
+      exit(x,y,key.name=="enter");
     } else if (!key || !key.ctrl){
       charm.cursor(false);
       var right=[];
       if (key && key.name == 'backspace'){
-        if (x>1){          
+        if (x>1){
           right = buffer.slice(x-1);
           buffer.length=x-2;
           buffer.push.apply(buffer, right);
-          charm.position(--x, y);
+          charm.position(--x+prompt.length, y);
         }
       } else if (typeof char != "undefined"){
         buffer.splice(x-1, 0, char);
         right = buffer.slice((x++)-1);
       }
-      charm.erase('end').write(right.join('')).position(x,y).cursor(true);
-      find(buffer.join(''), suggestions.update.bind(suggestions));
+      charm.erase('end').write(right.join('')).position(prompt.length + x,y).cursor(true);
+      find(buffer.join(''), function(res){
+        suggestions.update(res, opts.auto);
+        if (opts.auto && res.length==1) exit(x,y,true);
+      });
     }
   })
 });

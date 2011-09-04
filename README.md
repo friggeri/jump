@@ -6,13 +6,26 @@
 
 #Usage
 
-Pretty simple :
+Pretty simple, `jump` is aliased to `j` :
 
     j
 
 Type a few letters, `jump` autosuggests 5 results, move with arrows, return to select.
 
+`jump` also supports a few options:
+
+    jump [options]
+
+      Options:
+
+        -h, --help       output usage information
+        -v, --version    output the version number
+        -n --number <n>  number of suggestions
+        -a --auto        automatically change directory if only one suggestion
+    
+
 `jump` uses spotlight (`mdfind`) behind the scenes, probably won't work on anything but osx.
+
 
 #TODO
 
