@@ -2,7 +2,7 @@
   "author": "Adrien Friggeri <adrien@friggeri.net> (http://friggeri.net)",
   "name": "jump",
   "description": "autosuggest change directory",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "repository": {
     "url": "git://github.com/afriggeri/jump.git"
   },
