@@ -74,21 +74,17 @@ Suggestions.prototype.update = function(newSuggestions){
   this.render();
 };
 
-Suggestions.prototype.selectPrevious = function(){
-  if (this.selected>0){
+var cycle = function(dir){
+  return function(){
+    var mod  = Math.min(this.number, this.length);
+    var step = (mod + dir) % mod;
     this.defaults=false;
-    this.selected--;
+    this.selected=(this.selected+step)%mod;
+    this.render();
   }
-  this.render();
-};
-
-Suggestions.prototype.selectNext = function(){
-  if (this.selected<this.number && this.selected<this.length-1){
-    this.defaults=false;
-    this.selected++;
-  }
-  this.render();
-};
+}
+Suggestions.prototype.selectPrevious = cycle(-1);
+Suggestions.prototype.selectNext     = cycle(+1);
 
 Suggestions.prototype.output = function(){
   if (this[this.selected]){
