@@ -122,7 +122,7 @@ Suggestions.prototype.render = function(){
 };
 
 opts
-  .version('0.0.3')
+  .version('0.0.4')
   .option('-n --number <n>', 'number of suggestions', Number, 5)
   .option('-a --auto', 'automatically change directory if only one suggestion', false)
   .parse(process.argv)

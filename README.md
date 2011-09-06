@@ -26,6 +26,9 @@ Type a few letters, `jump` autosuggests 5 results, move with arrows, return to s
 
 `jump` uses spotlight (`mdfind`) behind the scenes, probably won't work on anything but osx.
 
+#Service
+
+A service is included so that it is possible to bind a keyboard shortcut to starting jump (e.g. `^T`).
 
 #TODO
 
