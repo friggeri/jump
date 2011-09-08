@@ -1,7 +1,7 @@
 #Installation
 
     npm -g install jump
-    jump >> ~/.bash_profile
+    jump >> ~/.bash_profile  # or ~/.zshrc
     source ~/.bash_profile
 
 #Usage
