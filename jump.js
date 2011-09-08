@@ -73,7 +73,7 @@ if (opts.args.length){
   var prompt = '> ';
   charm.write(prompt);
   process.stdin.resume();
-  process.stdin.on('keypress', function(char, key) {
+  process.stdin.on('keypress', function(chr, key) {
     charm.position(function(x,y){
       x = x - prompt.length;
       if (key && key.name == 'up'){
@@ -100,8 +100,8 @@ if (opts.args.length){
             buffer.push.apply(buffer, right);
             charm.position(--x+prompt.length, y);
           }
-        } else if (typeof char != "undefined"){
-          buffer.splice(x-1, 0, char);
+        } else if (typeof chr != "undefined"){
+          buffer.splice(x-1, 0, chr);
           right = buffer.slice((x++)-1);
         }
         charm.erase('end').write(right.join('')).position(prompt.length + x,y).cursor(true);
