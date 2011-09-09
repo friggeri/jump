@@ -89,9 +89,9 @@ if (opts.args.length){
       } else if (key && key.name == 'right'){
         if (x<=buffer.length) charm.right();
       } else if (key && key.ctrl && key.name == 'a'){
-        charm.position(0,y);
+        charm.position(1+prompt.length,y);
       } else if (key && key.ctrl && key.name == 'e'){
-        charm.position(1+buffer.length, y);
+        charm.position(1+prompt.length+buffer.length, y);
       } else if (key && (key.name == "enter" || (key.ctrl && key.name == 'c'))){
         exit(x,y,key.name=="enter"?suggestions.get():null);
       } else if (!key || !key.ctrl){
@@ -103,6 +103,8 @@ if (opts.args.length){
             buffer.length=x-2;
             buffer.push.apply(buffer, right);
             charm.position(--x+prompt.length, y);
+          } else {
+            right = buffer.slice(0);
           }
         } else if (typeof chr != "undefined"){
           buffer.splice(x-1, 0, chr);
