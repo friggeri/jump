@@ -80,18 +80,18 @@ if (opts.args.length){
   process.stdin.on('keypress', function(chr, key) {
     charm.position(function(x,y){
       x = x - prompt.length;
-      if (key && key.name == 'up'){
+      if (key && (key.name == 'up' || (key.ctrl && key.name == 'p'))){
         suggestions.selectPrevious();
-      } else if (key && key.name == 'down'){
+      } else if (key && (key.name == 'down' || (key.ctrl && key.name == 'n'))){
         suggestions.selectNext();
-      } else if (key && key.name == 'left'){
+      } else if (key && (key.name == 'left' || (key.ctrl && key.name == 'b'))){
         if (x>1) charm.left();
-      } else if (key && key.name == 'right'){
+      } else if (key && (key.name == 'right' || (key.ctrl && key.name == 'f'))){
         if (x<=buffer.length) charm.right();
       } else if (key && key.ctrl && key.name == 'a'){
-        charm.position(0,y);
+        charm.position(1+prompt.length,y);
       } else if (key && key.ctrl && key.name == 'e'){
-        charm.position(1+buffer.length, y);
+        charm.position(1+prompt.length+buffer.length, y);
       } else if (key && (key.name == "enter" || (key.ctrl && key.name == 'c'))){
         exit(x,y,key.name=="enter"?suggestions.get():null);
       } else if (!key || !key.ctrl){
@@ -103,6 +103,8 @@ if (opts.args.length){
             buffer.length=x-2;
             buffer.push.apply(buffer, right);
             charm.position(--x+prompt.length, y);
+          } else {
+            right = buffer.slice(0);
           }
         } else if (typeof chr != "undefined"){
           buffer.splice(x-1, 0, chr);
