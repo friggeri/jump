@@ -80,13 +80,13 @@ if (opts.args.length){
   process.stdin.on('keypress', function(chr, key) {
     charm.position(function(x,y){
       x = x - prompt.length;
-      if (key && key.name == 'up'){
+      if (key && (key.name == 'up' || (key.ctrl && key.name == 'p'))){
         suggestions.selectPrevious();
-      } else if (key && key.name == 'down'){
+      } else if (key && (key.name == 'down' || (key.ctrl && key.name == 'n'))){
         suggestions.selectNext();
-      } else if (key && key.name == 'left'){
+      } else if (key && (key.name == 'left' || (key.ctrl && key.name == 'b'))){
         if (x>1) charm.left();
-      } else if (key && key.name == 'right'){
+      } else if (key && (key.name == 'right' || (key.ctrl && key.name == 'f'))){
         if (x<=buffer.length) charm.right();
       } else if (key && key.ctrl && key.name == 'a'){
         charm.position(1+prompt.length,y);
