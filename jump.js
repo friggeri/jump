@@ -25,9 +25,11 @@ if (!process.env.JUMPPROFILE) {
 }
 
 // commander uses process.stdout by default, let's invert stdout and stderr
-var tmpOut = process.stdout; process.stdout = process.stderr; process.stderr = tmpOut;
+var stdout = process.stdout, stderr = process.stderr;
+Object.defineProperty(process, 'stdout', {get:function(){return stderr;}});
+Object.defineProperty(process, 'stderr', {get:function(){return stdout;}});
 
-var charm       = require('charm')(process.stdin, process.stdout)
+var charm       = require('charm')({stdin:process.stdin, stdout:process.stdout})
     Suggestions = require('./lib/suggestions')(charm),
     find        = require('./lib/find').find,
     tty         = require('tty'),
@@ -52,7 +54,7 @@ opts
 // cleanup function
 var exit = function(x, y, output){
   charm.cursor(false);
-  for (var idx=y; idx<=tty.getWindowSize()[0]; idx++) charm.position(0,idx).erase('line');
+  for (var idx=y; idx<=process.stdout.getWindowSize()[0]; idx++) charm.position(0,idx).erase('line');
   charm.position(0,y);
   if (output) {
     charm.write('cd "'+output+'"\n');
