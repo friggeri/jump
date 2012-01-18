@@ -58,7 +58,9 @@ var exit = function(x, y, output){
   charm.position(0,y);
   if (output) {
     charm.write('cd "'+output+'"\n');
-    process.stderr.write(output);
+    process.nextTick(function(){
+      process.stderr.write(output);
+    })
   }
   charm.cursor(true);
   process.exit();
