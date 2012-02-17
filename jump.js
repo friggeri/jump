@@ -39,6 +39,7 @@ var charm       = require('charm')({stdin:process.stdin, stdout:process.stdout})
 opts
   .version('0.0.5')
   .option('-n --number <n>', 'number of suggestions', Number, 5)
+  .option('-v --verbose', 'print cd command', false)
   .option('-a --auto', 'automatically cd if there is only one result', false)
   .on('--help', function(){
     charm.write('  Non interactive:\n')
@@ -50,18 +51,19 @@ opts
   })
   .parse(process.argv)
 
-
 // cleanup function
 var exit = function(x, y, output){
   charm.cursor(false);
   for (var idx=y; idx<=process.stdout.getWindowSize()[0]; idx++) charm.position(0,idx).erase('line');
   charm.position(0,y);
+  charm.cursor(true);
   if (output) {
-    charm.write('cd "'+output+'"\n');
+    if(opts.verbose) charm.write('cd "'+output+'"\n');
     process.stderr.write(output);
   }
-  charm.cursor(true);
-  process.exit();
+  process.nextTick(function(){
+    process.exit();
+  });
 }
 
 var suggestions = new Suggestions(opts.number);
@@ -94,7 +96,7 @@ if (opts.args.length){
         charm.position(1+prompt.length,y);
       } else if (key && key.ctrl && key.name == 'e'){
         charm.position(1+prompt.length+buffer.length, y);
-      } else if (key && (key.name == "enter" || (key.ctrl && key.name == 'c'))){
+      } else if (key && (key.name == "enter" || (key.ctrl && (key.name == 'c' || key.name == 'd')))){
         exit(x,y,key.name=="enter"?suggestions.get():null);
       } else if (!key || !key.ctrl){
         charm.cursor(false);
@@ -115,7 +117,9 @@ if (opts.args.length){
         charm.erase('end').write(right.join('')).position(prompt.length + x,y).cursor(true);
         find(buffer.join(''), function(res){
           suggestions.update(res);
-          if (opts.auto && res.length==1) exit(x,y,suggestions.get());
+          suggestions.render(function(){
+            if (opts.auto && res.length==1) exit(x,y,suggestions.get());
+          });
         });
       }
     })
