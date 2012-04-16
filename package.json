@@ -2,7 +2,7 @@
   "author": "Adrien Friggeri <adrien@friggeri.net> (http://friggeri.net)",
   "name": "jump",
   "description": "autosuggest change directory",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "repository": {
     "url": "git://github.com/afriggeri/jump.git"
   },
@@ -13,8 +13,8 @@
     "node": "*"
   },
   "dependencies": {
-    "charm"     : "~0.0.5",
-    "commander" : "~0.4.2"
+    "charm"     : "https://github.com/afriggeri/node-charm/tarball/master",
+    "commander" : "https://github.com/afriggeri/commander.js/tarball/master"
   },
   "devDependencies": {},
   "bin": {
