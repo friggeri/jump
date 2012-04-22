@@ -33,7 +33,9 @@ var charm       = require('charm')({stdin:process.stdin, stdout:process.stdout})
     Suggestions = require('./lib/suggestions')(charm),
     find        = require('./lib/find').find,
     tty         = require('tty'),
-    opts        = require('commander');
+    opts        = require('commander')
+    readline = require('readline'),
+    rl = readline.createInterface(process.stdin, process.stdout);;
 
 // parse options
 opts
@@ -79,9 +81,13 @@ if (opts.args.length){
   // start the repl
   var buffer = [];
   var prompt = '> ';
-  charm.write(prompt);
-  process.stdin.resume();
-  process.stdin.on('keypress', function(chr, key) {
+  rl.setPrompt(prompt, 2);
+  rl.on('SIGINT', function(){
+    charm.position(function(x,y){
+      exit(x,y,null);
+    })
+  })
+  rl.input.on('keypress', function(chr, key) {
     charm.position(function(x,y){
       x = x - prompt.length;
       if (key && (key.name == 'up' || (key.ctrl && key.name == 'p'))){
@@ -89,30 +95,30 @@ if (opts.args.length){
       } else if (key && (key.name == 'down' || (key.ctrl && key.name == 'n'))){
         suggestions.selectNext();
       } else if (key && (key.name == 'left' || (key.ctrl && key.name == 'b'))){
-        if (x>1) charm.left();
+        // ignore
       } else if (key && (key.name == 'right' || (key.ctrl && key.name == 'f'))){
-        if (x<=buffer.length) charm.right();
+        // ignore
       } else if (key && key.ctrl && key.name == 'a'){
         charm.position(1+prompt.length,y);
       } else if (key && key.ctrl && key.name == 'e'){
         charm.position(1+prompt.length+buffer.length, y);
-      } else if (key && (key.name == "enter" || (key.ctrl && (key.name == 'c' || key.name == 'd')))){
+      } else if (key && (key.name == "enter" || (key.ctrl && (key.name == 'd')))){
         exit(x,y,key.name=="enter"?suggestions.get():null);
       } else if (!key || !key.ctrl){
         charm.cursor(false);
         var right=[];
         if (key && key.name == 'backspace'){
-          if (x>1){
-            right = buffer.slice(x-1);
-            buffer.length=x-2;
+          if (x>0){
+            right = buffer.slice(x);
+            buffer.length=x-1;
             buffer.push.apply(buffer, right);
-            charm.position(--x+prompt.length, y);
+            charm.position(x+prompt.length, y);
           } else {
             right = buffer.slice(0);
           }
         } else if (typeof chr != "undefined"){
           buffer.splice(x-1, 0, chr);
-          right = buffer.slice((x++)-1);
+          right = buffer.slice(x-1);
         }
         charm.erase('end').write(right.join('')).position(prompt.length + x,y).cursor(true);
         find(buffer.join(''), function(res){
@@ -124,4 +130,5 @@ if (opts.args.length){
       }
     })
   });
+  rl.prompt();
 }
