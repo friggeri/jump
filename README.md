@@ -1,10 +1,10 @@
-#Installation
+# Installation
 
     npm -g install jump
     jump >> ~/.bash_profile  # or ~/.zshrc
     source ~/.bash_profile
 
-#Usage
+# Usage
 
 Pretty simple, `jump` is aliased to `j` :
 
@@ -26,15 +26,15 @@ Type a few letters, `jump` autosuggests 5 results, move with arrows, return to s
 
 `jump` uses spotlight (`mdfind`) behind the scenes, probably won't work on anything but osx.
 
-#Service
+# Service
 
 A service is included so that it is possible to bind a keyboard shortcut to starting jump (e.g. `^T`).
 
-#TODO
+# TODO
 
 Sort by usage would be nice.
 
-#License
+# License
 Copyright (C) 2011 by Adrien Friggeri
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
